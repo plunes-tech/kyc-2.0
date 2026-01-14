@@ -1,0 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap');
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Poppins', sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6, p {
+    font-family: 'Poppins';
+}
+
+@import "tailwindcss";
+
+@theme {
+    --breakpoint-sm: calc(40rem + 1px);
+    --breakpoint-md: calc(48rem + 1px);
+    --breakpoint-lg: calc(64rem + 1px);
+    --breakpoint-xl: calc(80rem + 1px);
+    --breakpoint-2xl: calc(96rem + 1px);
+}
