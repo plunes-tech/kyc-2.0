@@ -5,13 +5,10 @@ import App from './App.tsx'
 import { createTheme, MantineProvider } from '@mantine/core'
 import { Notifications } from '@mantine/notifications';
 import '@mantine/core/styles.css';
-import '@mantine/dates/styles.css';
 import '@mantine/notifications/styles.css';
-import { Provider } from 'react-redux'
-import store from './app/store.ts'
 
 const theme = createTheme({
-  fontFamily: 'Poppins, sans-serif',
+  fontFamily: 'Inter, sans-serif',
   fontSizes: {
     sm: "0.7rem"
   }
@@ -19,11 +16,9 @@ const theme = createTheme({
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Provider store={store}>
-      <MantineProvider theme={theme}>
-        <Notifications containerWidth={250} position='top-right'/>
-        <App />
-      </MantineProvider>
-    </Provider>
+    <MantineProvider theme={theme}>
+      <Notifications containerWidth={250} position='top-right'/>
+      <App />
+    </MantineProvider>
   </StrictMode>,
 )
