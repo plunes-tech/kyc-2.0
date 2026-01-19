@@ -5,12 +5,42 @@ export const fromatText = (text: string): string => {
     return text.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+export const scrollToTop = () => {
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
+}
+
 export const getUrlParams = (param: string): string => {
     if (!param) {
         return ""
     }
     const params = new URLSearchParams(window.location.search)
     return params.get(param) || ""
+}
+
+export const getMobileOperatingSystem = (): "Android" | "Windows Phone" | "iOS" | "unknown" => {
+    try {
+        var userAgent = navigator.userAgent || navigator.vendor
+
+        if(/windows phone/i.test(userAgent)) {
+            return "Windows Phone";
+        }
+
+        if(/android/i.test(userAgent)) {
+            return "Android";
+        }
+
+        if(/iPad|iPhone|iPod/.test(userAgent)) {
+            return "iOS";
+        }
+
+        return "unknown";
+    } catch (error) {
+        console.log(error);
+        return "unknown"
+    }
 }
 
 export function removeNulls<T>(obj: T): T {
