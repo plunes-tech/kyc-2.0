@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom"
 import NotFound from "./pages/NotFound"
 import PatientKyc from "./pages/PatientKyc"
 import Landing from "./pages/Landing"
+import HospitalKyc from "./pages/HospitalKyc"
+import Thankyou from "./Thankyou"
 
 function App() {
 
@@ -14,9 +16,9 @@ function App() {
                     {/* video-kyc  */}
                     <Route path="/video-kyc" element={<PatientKyc/>} />
                     {/* video-kyc-hospital */}
-                    <Route path="/video-kyc-hospital" element={<></>}/>
+                    <Route path="/video-kyc-hospital" element={<HospitalKyc/>}/>
                     {/* thank-you */}
-                    <Route path="/thank-you" element={<></>}/>
+                    <Route path="/thank-you" element={<Thankyou/>}/>
                     {/* not found page */}
                     <Route path="*" element={<NotFound/>}/>
                 </Routes>

@@ -1,3 +1,5 @@
+import api from "./axios";
+
 export const fromatText = (text: string): string => {
     if (!text) {
         return ""
@@ -143,3 +145,13 @@ export const CalculatePercent = (value: number, total: number): number => {
     const percent = Math.round((value * 100 / total))
     return percent;
 }
+
+export const getIpLocation = async () => {
+    try {
+        const response = await api.get("https://ipapi.co/json/");
+        return { latitude: response.data?.latitude, longitude: response.data?.longitude };
+    } catch (error) {
+        console.error("IP location fetch failed:", error);
+        return { latitude: 0, longitude: 0 }; // fallback if API fails
+    }
+};

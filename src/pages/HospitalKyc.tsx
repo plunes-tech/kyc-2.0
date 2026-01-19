@@ -1,19 +1,19 @@
 import React, { useEffect, useRef, useState } from "react";
-import { JitsiMeeting } from "@jitsi/react-sdk"
 import { ExtendedJitsiMeetExternalApi } from "../utils/types";
-import { getIpLocation, getUrlParams } from "../utils/utilits";
-import { notifications } from "@mantine/notifications";
-import api from "../utils/axios";
 import { useNavigate } from "react-router-dom";
+import { getIpLocation, getMobileOperatingSystem, getUrlParams } from "../utils/utilits";
+import api from "../utils/axios";
+import { notifications } from "@mantine/notifications";
 import GlobalLoader from "../components/GlobalLoader";
 import { ActionIcon, Button, Checkbox, CheckboxProps, NumberInput, TextInput } from "@mantine/core";
-import { CheckIcon, PhoneIcon, RecordingIcon } from "../assets/icons";
+import { CheckIcon, PhoneIcon, RecordingIcon, SyncIcon } from "../assets/icons";
+import { JitsiMeeting } from "@jitsi/react-sdk";
 import { Config } from "../utils/config";
 import { IJitsiMeetExternalApi } from "@jitsi/react-sdk/lib/types";
 
 const CheckboxIcon: CheckboxProps['icon'] = ({ className }) => <CheckIcon width={20} height={20} className={className} />;
 
-const PatientKyc: React.FC = () => {
+const HospitalKyc: React.FC = () => {
 
     const navigate = useNavigate()
     const apiRef = useRef<ExtendedJitsiMeetExternalApi>(null)
@@ -27,23 +27,23 @@ const PatientKyc: React.FC = () => {
     const [endVisible, setEndvisible] = useState(false)
     const [locationDenied, setLocationDenied] = useState(false)
     const [locationLoading, setLocationLoading] = useState(false)
-    const [postData, setPostData] = useState({
-        name: "",
-        mobile: "",
-        plNumber: "",
-        meetingToken: "",
-    })
+    const [facingMode, setFacingMode] = useState<"back" | "front">('back')
     const [cordinates, setCordinates] = useState({
         latitude: 0,
         longitude: 0,
     })
+    const [postData, setPostData] = useState({
+        name: "",
+        mobile: "",
+        roomId: "",
+        meetingToken: "",
+    })
 
     useEffect(() => {
-        const id = getUrlParams('plNumber')
+        const id = getUrlParams('roomId')
         if (id) {
             setRoomId(id)
-            setLoading(false)
-            setPostData({ ...postData, plNumber: id, meetingToken: id })
+            setPostData({ ...postData, roomId: id, meetingToken: id })
             fetchUserLocation()
         }
     }, [])
@@ -56,7 +56,7 @@ const PatientKyc: React.FC = () => {
                     const result = await api.get(`/api/kyc/get-meeting-data`, {
                         params: {
                             token: roomId,
-                            type: "BOOKING"
+                            type: "HOSPITAL"
                         }
                     })
                     if (result.data?.success) {
@@ -165,11 +165,11 @@ const PatientKyc: React.FC = () => {
                 message: "Please enter name"
             })
         }
-        if (!postData.plNumber) {
+        if (!postData.roomId) {
             return notifications.show({
                 title: "Error",
                 color: "red",
-                message: "Please enter PL number"
+                message: "Please enter room ID"
             })
         }
         let { longitude, latitude } = { ...cordinates }
@@ -197,7 +197,7 @@ const PatientKyc: React.FC = () => {
         try {
             const result = await api.post("/api/kyc/verify-kyc-token", {}, {
                 params: {
-                    token: postData.plNumber,
+                    token: postData.roomId,
                     lat: latitude,
                     long: longitude
                 }
@@ -216,6 +216,90 @@ const PatientKyc: React.FC = () => {
                 title: "Error",
                 color: "red",
                 message: errMsg || "An error occured, please try again later"
+            })
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const switchToFrontCamera = async () => {
+        if (!apiRef.current) {
+            console.log("Already toggling or camera not ready");
+            return
+        }
+        setLoading(true)
+        try {
+            if (getMobileOperatingSystem() === "iOS") {
+                const tempStream = await navigator.mediaDevices.getUserMedia({ video: true })
+                tempStream.getTracks().forEach(track => track.stop())
+            }
+            const frontVideoDevices = (await navigator.mediaDevices.enumerateDevices()).filter(device => device.kind === "videoinput")
+            const frontCamera = frontVideoDevices.find(device =>
+                device.label.toLowerCase().includes('front') ||
+                device.label.toLowerCase().includes('user') ||
+                device.label.toLowerCase().includes('selfie') ||
+                device.label.toLowerCase().includes('facetime'))
+
+            if (!frontCamera) {
+                console.log("No front camera found");
+                notifications.show({
+                    title: "Error",
+                    color: "red",
+                    message: "No front camera found"
+                })
+                return
+            }
+
+            await apiRef?.current?.setVideoInputDevice(frontCamera.label, frontCamera.deviceId)
+            setFacingMode('back')
+        } catch (error) {
+            console.warn(error);
+            notifications.show({
+                title: "Error",
+                color: "red",
+                message: "Error switching camera"
+            })
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const switchToBackCamera = async () => {
+        if (!apiRef.current) {
+            console.log("Already toggling or camera not ready");
+            return
+        }
+        setLoading(true)
+        try {
+            if (getMobileOperatingSystem() === "iOS") {
+                const tempStream = await navigator.mediaDevices.getUserMedia({ video: true })
+                tempStream.getTracks().forEach(track => track.stop())
+            }
+            const backVideoDevices = (await navigator.mediaDevices.enumerateDevices()).filter(device => device.kind === "videoinput")
+            const backCamera = backVideoDevices.find(device =>
+                device.label.toLowerCase().includes('back') ||
+                device.label.toLowerCase().includes('rear') ||
+                device.label.toLowerCase().includes('environment'))
+
+            if (!backCamera) {
+                console.log("No back camera found");
+                notifications.show({
+                    title: "Error",
+                    color: "red",
+                    message: "No back camera found"
+                })
+                return
+                return
+            }
+
+            await apiRef?.current?.setVideoInputDevice(backCamera.label, backCamera.deviceId)
+            setFacingMode('front')
+        } catch (error) {
+            console.warn(error);
+            notifications.show({
+                title: "Error",
+                color: "red",
+                message: "Error switching camera"
             })
         } finally {
             setLoading(false)
@@ -258,7 +342,7 @@ const PatientKyc: React.FC = () => {
                 <div className='flex items-center justify-center bg-[#1C6EA9] min-h-[100vh] py-4'>
                     <div className="bg-[#FFFFFF] rounded-[0.75rem] p-8 md:w-1/2">
                         <h3 className="text-[1.25rem] text-[#111111] font-semibold text-center mb-[1.5rem]">Enter your details</h3>
-                        <TextInput label="Enter your name" withAsterisk mb={20} radius={4}
+                        <TextInput label="Enter hospital name" withAsterisk mb={20} radius={4}
                             placeholder="Enter name" value={postData.name}
                             onChange={e => setPostData({ ...postData, name: e.target.value })}
                             classNames={{
@@ -266,7 +350,7 @@ const PatientKyc: React.FC = () => {
                                 input: "!border-1 !border-[#4CDA73]",
                             }}
                         />
-                        <NumberInput label="Enter your registered mobile number" withAsterisk mb={20} radius={4}
+                        <NumberInput label="Enter registered mobile number of hospital" withAsterisk mb={20} radius={4}
                             hideControls allowNegative={false} maxLength={10}
                             placeholder="Enter mobile number" value={Number(postData.mobile) || undefined}
                             onChange={e => setPostData({ ...postData, mobile: e.toString() ?? "" })}
@@ -275,9 +359,9 @@ const PatientKyc: React.FC = () => {
                                 input: "!border-1 !border-[#4CDA73]",
                             }}
                         />
-                        <TextInput label="Enter your room ID" withAsterisk mb={20} radius={4}
-                            placeholder="Enter room ID" value={postData.plNumber}
-                            onChange={e => setPostData({ ...postData, plNumber: e.target.value })}
+                        <TextInput label="Enter room ID" withAsterisk mb={20} radius={4}
+                            placeholder="Enter room ID" value={postData.roomId}
+                            onChange={e => setPostData({ ...postData, roomId: e.target.value })}
                             classNames={{
                                 label: "!text-[0.8rem] !text-[#222222] !font-semibold !mb-[0.25rem]",
                                 input: "!border-1 !border-[#4CDA73]",
@@ -419,23 +503,35 @@ const PatientKyc: React.FC = () => {
                                         })
                                         extendApi.executeCommand('setVideoQuality', 360)
                                         extendApi.addListener('tileViewChanged', event => {
-                                            if(!event.enabled) {
+                                            if (!event.enabled) {
                                                 console.warn("executing commnad");
-                                                extendApi.executeCommand('setTileView', {enabled: true})
+                                                extendApi.executeCommand('setTileView', { enabled: true })
                                             }
                                         })
                                     }}
-                                    getIFrameRef = { (iframeRef) => { iframeRef.style.height = 'calc(100vh - (1.5rem + 37px))';} }
+                                    getIFrameRef={(iframeRef) => { iframeRef.style.height = 'calc(100vh - (1.5rem + 37px))'; }}
                                 />
                             )}
                         </div>
-                        <div className="absolute bottom-[1rem] left-0 right-0 z-100 flex items-center gap-[1.25rem] w-fit mx-auto">
-                            {endVisible && <ActionIcon size="md" bg={"#FE2222"} radius={1000}
+                        {endVisible && <div className="absolute bottom-[1rem] left-0 right-0 z-100 flex items-center gap-[1.25rem] w-fit mx-auto">
+                            <ActionIcon size="md" bg={"#EAEAEA"} radius={1000}
+                                onClick={() =>{
+                                    if(facingMode==="back") {
+                                        switchToFrontCamera()
+                                    } else {
+                                        switchToBackCamera()
+                                    }
+                                }}
+                                className="!border-1 !border-[#484848] !text-[#484848]"
+                            >
+                                <SyncIcon className={`${facingMode==="back" ? "-scale-x-100" : ""}`} />
+                            </ActionIcon>
+                            <ActionIcon size="md" bg={"#FE2222"} radius={1000}
                                 onClick={() =>leaveCall()}
                             >
                                 <PhoneIcon/>
-                            </ActionIcon>}
-                        </div>
+                            </ActionIcon>
+                        </div>}
                     </div>
                 </div>
             )}
@@ -443,4 +539,4 @@ const PatientKyc: React.FC = () => {
     )
 }
 
-export default PatientKyc
+export default HospitalKyc
