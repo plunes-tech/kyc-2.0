@@ -1,0 +1,119 @@
+name: Deploy KYC Frontend
+
+on:
+  push:
+    branches:
+      - production
+      - development
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm i
+
+  deploy-staging:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/development'
+    environment: staging
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm i
+
+    - name: Build application for staging
+      run: npm run build
+      env:
+        VITE_MEET_ROOM: ${{ secrets.VITE_MEET_ROOM }}
+        VITE_API_KYC_URL: ${{ secrets.VITE_API_KYC_URL }}
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Deploy to S3 staging
+      run: |
+        echo "Deploying to staging bucket: ${{ secrets.S3_BUCKET_STAGING }}"
+        aws s3 sync dist/ s3://${{ secrets.S3_BUCKET_STAGING }} --delete --cache-control "max-age=86400"
+        
+    - name: Invalidate CloudFront staging
+      run: |
+        echo "Invalidating CloudFront distribution: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID_STAGING }}"
+        aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID_STAGING }} --paths "/*"
+
+    - name: Staging deployment success
+      run: |
+        echo "✅ Staging deployment completed successfully!"
+        echo "🌐 Staging URL: https://staging-kyc-meet.plunes.com"
+
+  deploy-production:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/production'
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm i
+
+    - name: Build application for production
+      run: npm run build
+      env:
+        VITE_ENV: ${{ secrets.VITE_ENV }}
+        VITE_MEET_ROOM: ${{ secrets.VITE_MEET_ROOM }}
+        VITE_API_KYC_URL: ${{ secrets.VITE_API_KYC_URL }}
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Deploy to S3 production
+      run: |
+        echo "Deploying to production bucket: ${{ secrets.S3_BUCKET_PRODUCTION }}"
+        aws s3 sync dist/ s3://${{ secrets.S3_BUCKET_PRODUCTION }} --delete --cache-control "max-age=31536000"
+        
+    - name: Invalidate CloudFront production
+      run: |
+        echo "Invalidating CloudFront distribution: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID_PRODUCTION }}"
+        aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID_PRODUCTION }} --paths "/*"
+
+    - name: Production deployment success
+      run: |
+        echo "🚀 Production deployment completed successfully!"
+        echo "🌐 Production URL: https://kyc-meet.plunes.com"
