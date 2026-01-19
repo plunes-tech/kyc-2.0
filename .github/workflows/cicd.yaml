@@ -94,7 +94,7 @@ jobs:
       env:
         VITE_ENV: ${{ secrets.VITE_ENV }}
         VITE_MEET_ROOM: ${{ secrets.VITE_MEET_ROOM }}
-        VITE_API_KYC_URL: ${{ secrets.VITE_API_KYC_URL }}
+        VITE_API_KYC_URL_PROD: ${{ secrets.VITE_API_KYC_URL_PROD }}
 
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
